@@ -145,6 +145,8 @@ mark.hl{background:var(--hl);color:inherit;border-radius:3px;box-shadow:0 0 0 2p
 .pos{display:inline-block;font:600 12px var(--ui);padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--mute);margin:18px 0 6px}
 .sheet ol{margin:0;padding-left:1.3em;font:16px/1.5 var(--ff)}
 .sheet ol li{margin-bottom:6px}
+.sheet ol.zh{list-style:none;padding-left:0;margin:6px 0 4px;font:16px/1.6 var(--ui)}
+.sheet ol.zh li{margin-bottom:2px}
 .sheet ol li i{display:block;color:var(--mute);font-size:15px}
 .plain{font:18px/1.55 var(--ff);white-space:pre-wrap;margin:12px 0 0}
 .acts{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
@@ -219,7 +221,7 @@ mark.hl{background:var(--hl);color:inherit;border-radius:3px;box-shadow:0 0 0 2p
 <section class="view" id="vSet">
   <h1 class="big">设置</h1>
   <div id="setBox"></div>
-  <p class="about">离线词典基于 Princeton WordNet 3.1 和 CMU Pronouncing Dictionary，共约 8 万词条。点词的语境解释和划句解释由 Claude 生成，需要填入你自己的 Anthropic API key，按用量付费；没有 key 时离线词典、朗读、书架和生词本都照常能用。你的书和生词只保存在这台手机上。</p>
+  <p class="about">离线词典基于 Princeton WordNet 3.1、ECDICT 英汉词典和 CMU Pronouncing Dictionary，共约 9 万词条。点词的语境解释和划句解释由 Claude 生成，需要填入你自己的 Anthropic API key，按用量付费；没有 key 时离线词典、朗读、书架和生词本都照常能用。你的书和生词只保存在这台手机上。</p>
 </section>
 
 <nav class="tabs" id="tabs">
@@ -262,7 +264,7 @@ const SAMPLE={key:'sample',name:'How a River Draws Its Own Map',pages:1,added:0,
 {t:'h',x:'When a loop is cut off'},
 {t:'p',x:'Eventually two neighbouring bends may come so close that a flood breaks through the narrow strip of land between them. The river abandons the old loop and takes the shorter path. What remains is a curved, isolated lake, often called an oxbow lake, which can persist for centuries as a quiet reminder of where the river once flowed.'},
 {t:'p',x:'Engineers who straighten rivers for shipping often find that the water is reluctant to cooperate. Without constant maintenance, the channel begins to bend again, as if the river remembers the shape it prefers.'}]};
-let set=Object.assign({fs:19,lh:'n',read:'auto',font:'serif',ctx:'auto',focus:'on',chunk:'on',rate:1,engine:'web',voice:'',cvoice:'buttery',style:'natural',accent:'all'},LS.get('set',{}));
+let set=Object.assign({fs:19,lh:'n',read:'auto',font:'serif',ctx:'auto',focus:'on',chunk:'on',rate:1,engine:'web',voice:'',cvoice:'buttery',style:'natural',accent:'all',lang:'en'},LS.get('set',{}));
 let curEl=null,lock=false,selRange=null;
 let book=LS.get('book',[]),shelf=[SAMPLE],doc=SAMPLE,view='vShelf',readY=0;
 let sample=null,tts=null,mode='',req=0,selT=0,lastSel=0,selText='',selCtx='',cache={};
@@ -548,6 +550,7 @@ $('#file').addEventListener('change',e=>openFile(e.target.files[0]));
 
 /* offline dictionary, split into small files by the first two letters */
 const PN={n:'noun',v:'verb',adj:'adjective',adv:'adverb'};
+const ZH=()=>set.lang==='zh';
 const IRR={};
 'be:was,were,been,is,am,are,being|have:had,has,having|do:did,done,does|go:went,gone,goes|see:saw,seen|come:came|take:took,taken|give:gave,given|get:got,gotten|make:made|know:knew,known|think:thought|find:found|tell:told|become:became|leave:left|feel:felt|bring:brought|begin:began,begun|keep:kept|hold:held|write:wrote,written|stand:stood|hear:heard|mean:meant|meet:met|run:ran|pay:paid|sit:sat|speak:spoke,spoken|lie:lay,lain|lay:laid|lead:led|grow:grew,grown|lose:lost|fall:fell,fallen|send:sent|build:built|understand:understood|draw:drew,drawn|break:broke,broken|spend:spent|rise:rose,risen|drive:drove,driven|buy:bought|wear:wore,worn|choose:chose,chosen|seek:sought|throw:threw,thrown|catch:caught|deal:dealt|win:won|fight:fought|teach:taught|eat:ate,eaten|sell:sold|forget:forgot,forgotten|fly:flew,flown|swim:swam,swum|sing:sang,sung|ring:rang,rung|drink:drank,drunk|shake:shook,shaken|hide:hid,hidden|bite:bit,bitten|freeze:froze,frozen|steal:stole,stolen|strike:struck,stricken|bear:bore,borne|tear:tore,torn|swear:swore,sworn|sleep:slept|feed:fed|flee:fled|bind:bound|wind:wound|dig:dug|hang:hung|shoot:shot|light:lit|slide:slid|stick:stuck|sting:stung|swing:swung|spin:spun|weep:wept|sweep:swept|lend:lent|bend:bent|arise:arose,arisen|forbid:forbade,forbidden|undergo:underwent,undergone|withdraw:withdrew,withdrawn|overcome:overcame|mistake:mistook,mistaken|ride:rode,ridden|blow:blew,blown|say:said|show:shown|prove:proven|tread:trod,trodden|forgive:forgave,forgiven|awake:awoke,awoken|shine:shone|sink:sank,sunk|spring:sprang,sprung|stride:strode|weave:wove,woven|seize:seized|man:men|woman:women|child:children|foot:feet|tooth:teeth|goose:geese|mouse:mice|person:people|life:lives|knife:knives|wife:wives|leaf:leaves|half:halves|self:selves|wolf:wolves|shelf:shelves|thief:thieves|phenomenon:phenomena|criterion:criteria|datum:data|analysis:analyses|crisis:crises|thesis:theses|hypothesis:hypotheses|basis:bases|index:indices|matrix:matrices|appendix:appendices|nucleus:nuclei|stimulus:stimuli|fungus:fungi|cactus:cacti|medium:media|curriculum:curricula|stratum:strata|ox:oxen|good:better,best|bad:worse,worst|far:further,farther,furthest,farthest|little:less,least|much:more,most'.split('|').forEach(g=>{const[b,f]=g.split(':');f.split(',').forEach(x=>(IRR[x]=IRR[x]||[]).push(b))});
 const RULES=[['ies','y'],['es','e'],['es',''],['s',''],['ied','y'],['ed','e'],['ed',''],['ing','e'],['ing',''],['ier','y'],['iest','y'],['er','e'],['er',''],['est','e'],['est',''],['men','man'],['ves','f'],['ves','fe'],['ily','y'],['ally','al'],['ly','le'],['ly','']];
@@ -557,11 +560,12 @@ function cands(w){
   const seen=new Set();return c.filter(([x])=>x&&!seen.has(x)&&seen.add(x));
 }
 const BK=new Map();
-const ROUTE={};'a0:a_,aa,ab,ac,ad,ae,af;a1:ag,ah,ai,aj,ak,al,am;a2:an,ao,ap,aq;a3:ar,as,at;a4:au,av,aw,ax,ay,az;b5:b_,ba,bb,bc,bd;b6:be,bh,bi,bj,bk;b7:bl,bm,bn,bo,bp;b8:br,bs,bt,bu,bv,bw,by;c9:c_;c10:ca;c11:cb,cc,cd,ce,cf,cg,ch;c12:ci,cj,cl,cm,cn;c13:co;c14:cp,cr,cs,ct,cu,cv,cw,cx,cy,cz;d15:d_,da,db,dc,dd;d16:de,df,dg,dh;d17:di,dj,dk,dl,dm,dn;d18:do,dp,dr,ds,dt,du,dv,dw,dy,dz;e19:e_,ea,eb,ec,ed,ee,ef,eg,eh,ei,ej,ek,el,em;e20:en,eo,ep,eq,er,es,et,eu,ev,ew;e21:ex,ey,ez;f22:f_,fa,fb,fc,fd,fe,fh,fi,fj;f23:fl,fm,fn,fo,fp,fr,fs,ft;f24:fu,fw;g25:g_,ga,gb,gc,gd,ge,gh,gi,gj,gl,gm,gn;g26:go,gp,gr,gs,gu,gw,gy;h27:h_,ha,hb,hc,hd;h28:he,hf,hg,hh,hi,hl,hm,hn;h29:ho,hp,hq,hr,hs,ht,hu,hy,hz;i30:i_,ia,ib,ic,id,ie,if,ig,ii,ij,ik,il,im;i31:in;i32:io,ip,iq,ir,is,it,iu,iv,iw,ix,iy,iz;j33:j_,ja,jd,je,jf,jh,ji,jn,jo,jr,ju,jv,jy;k34:k_,ka,kb,kc,ke,kg,kh,ki,kk,kl,km,kn,ko,kp,kr,ks,kt,ku,kv,kw,ky;l35:l_,la,lb,lc,ld,le,lf,lg,lh;l36:li,lj,ll,lm,lo,lp,lr,ls,lt,lu,lv,lw,lx;l37:ly;m38:m_,ma,mb,mc,md;m39:me,mf,mg,mh;m40:mi,mk,ml,mm,mn;m41:mo,mp,mr,ms,mt,mu,mv,mw,mx,my;n42:n_,na,nb,nc,nd,ne,ng,nh,ni,nj,nl,nm,nn;n43:no,np,nr,ns,nt,nu,nv,nw,ny;o44:o_,oa,ob,oc,od,oe,of,og,oh,oi,oj,ok,ol,om,on,oo,op,or,os,ot;o45:ou,ov,ow,ox,oy,oz;p46:p_,pa,pb,pc,pd;p47:pe,pf,ph;p48:pi,pj,pk,pl,pm,pn;p49:po,pp;p50:pr;p51:ps,pt,pu,pv,pw,px,py;q52:q_,qa,qc,qe,qi,qo,qu;r53:r_,ra,rb,rc;r54:re;r55:rf,rg,rh,ri,rn,ro,rp,rt,ru,rv,rw,ry;s56:s_,sa,sb,sc,sd;s57:se,sf,sg;s58:sh,si,sj,sk;s59:sl,sm,sn,so;s60:sp,sq,sr,ss;s61:st;s62:su,sv,sw,sy,sz;t63:t_,ta,tb,tc,td,te;t64:th,ti,tk,tl,tm,tn,to,tp;t65:tr,ts,tt,tu,tv,tw,tx,ty,tz;u66:u_,ua,ub,uc,ud,uf,ug,uh,ui,uk,ul,um;u67:un;u68:up,ur,us,ut,uu,uv,ux,uy,uz;v69:v_,va,vc,vd,ve,vf,vh,vi,vl,vo,vr,vt,vu;w70:w_,wa,wb,we,wh,wi,wl,wm,wn;w71:wo,wp,wr,ws,wt,wu,wv,ww,wy;x72:x_,xa,xc,xe,xh,xi,xl,xm,xt,xv,xx,xy;y73:y_,ya,yb,ye,yg,yh,yi,yl,ym,yo,yp,yq,yr,yt,yu;z74:z_,za,zb,zd,ze,zh,zi,zl,zn,zo,zr,zs,zu,zw,zy'.split(';').forEach(g=>{const[n,ks]=g.split(':');ks.split(',').forEach(k=>ROUTE[k]=n)});
+const ROUTE={};'a0:a_,aa,ab,ac;a1:ad,ae,af,ag,ah,ai,aj,ak;a2:al,am;a3:an,ao;a4:ap,aq,ar;a5:as,at,au,av,aw,ax,ay,az;b6:b_,ba,bb,bc,bd;b7:be,bg,bh,bi,bj,bk;b8:bl,bm,bn,bo,bp;b9:br,bs,bt;b10:bu,bv,bw,by;c11:c_;c12:ca;c13:cb,cc,cd,ce,cf,cg;c14:ch;c15:ci,cj,cl,cm,cn;c16:co;c17:cp,cr,cs,ct,cu,cv,cw,cx;c18:cy,cz;d19:d_,da,db,dc,dd;d20:de;d21:df,dg,dh;d22:di;d23:dj,dk,dl,dm,dn,do,dp,dr,ds,dt,du,dv,dw,dy,dz;e24:e_,ea,eb,ec,ed,ee,ef,eg,eh,ei,ej,ek,el,em;e25:en,eo,ep,eq,er,es,et;e26:eu,ev,ew,ex,ey,ez;f27:f_,fa,fb,fc,fd,fe,ff,fg,fh;f28:fi,fj,fl,fm,fn;f29:fo,fp,fr,fs,ft;f30:fu,fw,fx,fy;g31:g_,ga,gb,gc,gd,ge,gh,gi,gj;g32:gl,gm,gn,go,gp;g33:gr,gs,gt,gu,gw,gy;h34:h_,ha,hb,hc,hd;h35:he,hf,hg,hh,hi,hl,hm,hn;h36:ho,hp,hq,hr,hs,ht,hu;h37:hy,hz;i38:i_,ia,ib,ic,id,ie,if,ig,ii,ij,ik,il,im;i39:in;i40:io,ip,iq,ir,is,it,iu,iv,iw,ix,iy,iz;j41:j_,ja,jb,jc,jd,je,jf,jh,ji,jj,jm,jn,jo,jp,jr,js,ju,jv,jy;k42:k_,ka,kb,kc,ke,kg,kh,ki,kk,kl,km,kn,ko,kp,kr,ks,kt,ku,kv,kw,ky;l43:l_,la,lb,lc,ld;l44:le,lf,lg,lh,li,lj,ll;l45:lm,ln,lo,lp,lr,ls,lt,lu,lv,lw,lx,ly;m46:m_;m47:ma;m48:mb,mc,md,me,mf,mg,mh;m49:mi,mk,ml,mm,mn;m50:mo,mp,mr,ms,mt;m51:mu,mv,mw,mx,my;n52:n_,na,nb,nc,nd,ne,nf,ng,nh,ni,nj,nl,nm,nn;n53:no,np,nr,ns,nt,nu,nv,nw,ny,nz;o54:o_,oa,ob,oc,od,oe,of,og,oh,oi,oj,ok,ol,om,on,oo,op;o55:or,os,ot,ou,ov,ow,ox,oy,oz;p56:p_;p57:pa;p58:pb,pc,pd,pe,pf,pg;p59:ph,pi,pj,pk;p60:pl,pm,pn;p61:po,pp;p62:pr;p63:ps,pt,pu,pv,pw,px,py;q64:q_,qa,qb,qc,qe,qi,qo,qp,qq,qt,qu,qv;r65:r_,ra,rb,rc;r66:re;r67:rf,rg,rh,ri,rm,rn,ro,rp,rs,rt;r68:ru,rv,rw,ry;s69:s_,sa,sb;s70:sc,sd;s71:se,sf,sg;s72:sh;s73:si,sj,sk,sl,sm;s74:sn,so;s75:sp,sq,sr,ss;s76:st;s77:su,sv,sw;s78:sy,sz;t79:t_,ta,tb,tc,td;t80:te,tg;t81:th,ti,tk,tl,tm,tn;t82:to,tp;t83:tr,ts,tt;t84:tu,tv,tw,tx,ty,tz;u85:u_,ua,ub,uc,ud,ue,uf,ug,uh,ui,uk,ul,um;u86:un;u87:up,ur,us,ut,uu,uv,ux,uy,uz;v88:v_,va,vc,vd,ve,vf,vg,vh,vi,vl;v89:vo,vp,vr,vs,vt,vu,vw,vy;w90:w_,wa,wb,wc,we,wg,wh;w91:wi,wl,wm,wn,wo,wp,wr,ws,wt,wu,wv,ww,wy;x92:x_,xa,xc,xe,xh,xi,xl,xm,xt,xv,xx,xy;y93:y_,ya,yb,yd,ye,yg,yh,yi,yl,ym,yo,yp,yq,yr,yt,yu,yv;z94:z_,za,zb,zd,ze,zh,zi,zl,zn,zo,zr,zs,zu,zw,zy'.split(';').forEach(g=>{const[n,ks]=g.split(':');ks.split(',').forEach(k=>ROUTE[k]=n)});
 const bucket=w=>ROUTE[w[0]+(/[a-z]/.test(w[1]||'')?w[1]:'_')]||'none';
-function getB(k){if(k==='none')return Promise.resolve(new Map());if(!BK.has(k))BK.set(k,fetch('dict/'+k+'.json').then(r=>{if(r.status===404)return[];if(!r.ok)throw new Error('net');return r.json()}).then(a=>new Map(a.map(x=>[x[0],x]))).catch(e=>{BK.delete(k);throw e}));return BK.get(k)}
+function getB(k){if(k==='none')return Promise.resolve(new Map());if(!BK.has(k))BK.set(k,fetch('dict2/'+k+'.json').then(r=>{if(r.status===404)return[];if(!r.ok)throw new Error('net');return r.json()}).then(a=>new Map(a.map(x=>[x[0],x]))).catch(e=>{BK.delete(k);throw e}));return BK.get(k)}
 async function dictLookup(w){const out=[];let exact=false;for(const[c,k]of cands(w)){if(!/^[a-z]/.test(c)||(exact&&!k))continue;const e=(await getB(bucket(c))).get(c);if(e&&!out.some(o=>o[0]===e[0])){if(!out.length&&c===cands(w)[0][0])exact=true;out.push(e)}if(out.length>=2)break}return out}
 function entryHTML(e,first){
+  if(!e[2])return '';
   return e[2].split(' ## ').map(g=>{const i=g.indexOf('|'),p=g.slice(0,i),defs=g.slice(i+1).split(' ;; ');
     return `<span class="pos">${PN[p]||p}</span><ol>${defs.map(d=>{const[a,x]=d.split(' || ');return `<li>${esc(a)}${x?`<i>${esc(x)}</i>`:''}</li>`}).join('')}</ol>`}).join('');
 }
@@ -606,18 +610,21 @@ function lookup(w,ctx,el){
   const my=++req;
   openSheet(`<div class="top"><div class="hrow"><div class="hw"><strong id="hwt">${esc(w)}</strong><span class="ipa" id="ipa"></span><span class="from" id="from" hidden></span></div><button class="say" data-say="${esc(w)}" aria-label="朗读">${SAY}</button><button class="say" id="save" aria-label="加入生词本" aria-pressed="false">${STAR}</button></div>
 <p class="m1 wait" id="m1">…</p><div class="links"><button class="more" id="more">${MORE}上滑看详细解释</button>${ctx?'<button class="sx" id="sentX">解释整句</button>':''}</div></div>
-<div class="det">${ctx?'<div id="cbox"></div>':''}<div class="lab">Dictionary</div><div id="off"><div class="sk" style="width:30%"></div><div class="sk"></div><div class="sk" style="width:75%"></div></div></div>`,'word');
-  const S={w,hw:w,ipa:'',pos:'',def:'',ctx,cm:''};lookup.S=S;
+<div class="det">${ctx?'<div id="cbox"></div>':''}<div class="lab">${ZH()?'词典':'Dictionary'}</div><div id="off"><div class="sk" style="width:30%"></div><div class="sk"></div><div class="sk" style="width:75%"></div></div></div>`,'word');
+  const S={w,hw:w,ipa:'',pos:'',def:'',zh:'',ctx,cm:''};lookup.S=S;
   target=el||null;if(el){const p=el.closest('#doc>p,#doc>h2');if(p&&set.focus==='on')setCur(p);lock=true}
   requestAnimationFrame(keepVisible);
   dictLookup(w).then(list=>{
     if(my!==req)return;
-    if(!list.length){$('#off').innerHTML='<p class="err">离线词典里没有这个词。</p>';if(!S.cm){$('#m1').textContent=ctx?'正在结合句子解释…':'离线词典里没有这个词。'}return}
-    const e=list[0];S.hw=e[0];S.ipa=e[1];const g=e[2].split(' ## ')[0];S.pos=PN[g.split('|')[0]]||'';S.def=g.split('|')[1].split(' ;; ')[0].split(' || ')[0];
+    if(!ZH())list=list.filter(x=>x[2]);
+    if(!list.length){$('#off').innerHTML='<p class="err">离线词典里没有这个词。</p>';if(!S.cm){$('#m1').className='m1 wait';$('#m1').textContent='离线词典里没有这个词。'}return}
+    const e=list[0];S.hw=e[0];S.ipa=e[1];S.zh=(e[3]||'').split(' | ')[0].replace(/^\[[^\]]*\]\s*/,'');
+    if(e[2]){const g=e[2].split(' ## ')[0];S.pos=PN[g.split('|')[0]]||'';S.def=g.split('|')[1].split(' ;; ')[0].split(' || ')[0]}
+    if(ZH()&&S.zh)S.def=S.zh;
     $('#hwt').textContent=e[0];$('#ipa').textContent=e[1];$('.say').dataset.say=e[0];
     if(e[0]!==w.toLowerCase()){$('#from').hidden=false;$('#from').textContent='← '+w}
     if(!S.cm){$('#m1').className='m1';$('#m1').textContent=S.def}
-    $('#off').innerHTML=list.map((x,i)=>(i?`<div class="hw" style="margin-top:18px"><strong style="font-size:22px">${esc(x[0])}</strong><span class="ipa">${esc(x[1])}</span></div>`:'')+entryHTML(x)).join('');
+    $('#off').innerHTML=list.map((x,i)=>(i?`<div class="hw" style="margin-top:18px"><strong style="font-size:22px">${esc(x[0])}</strong><span class="ipa">${esc(x[1])}</span></div>`:'')+(ZH()&&x[3]?`<ol class="zh">${x[3].split(' | ').map(l=>`<li>${esc(l)}</li>`).join('')}</ol>`:'')+entryHTML(x)).join('');
     markSaved();
   }).catch(()=>{if(my===req){$('#off').innerHTML='<p class="err">离线词典没有加载成功，请检查网络。</p>';if(!S.cm)$('#m1').textContent='离线词典没有加载成功。'}});
   if(ctx){$('#cbox').innerHTML=`<div class="lab">In this sentence</div><p class="ctx">${hlSent(ctx,w)}</p><p class="err" id="cerr" hidden></p>${set.ctx==='auto'?'':'<div class="acts" style="margin-top:10px"><button class="btn ghost" data-ctx="1">结合句子解释</button></div>'}`;if(set.ctx==='auto')ctxExplain(my)}
@@ -626,30 +633,30 @@ function lookup(w,ctx,el){
 function hlSent(ctx,w){const re=new RegExp('\\b('+w.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')\\b','gi');return esc(ctx).replace(re,'<b>$1</b>')}
 async function ctxExplain(my){
   const S=lookup.S;if(!S||!S.ctx)return;
-  const key=S.w.toLowerCase()+'|'+S.ctx,put=t=>{S.cm=t;const m=$('#m1');if(m){m.className='m1';m.textContent=t}},err=t=>{const c=$('#cerr');if(c){c.hidden=false;c.innerHTML=t}};
+  const key=set.lang+'|'+S.w.toLowerCase()+'|'+S.ctx,put=t=>{S.cm=t;const m=$('#m1');if(m){m.className='m1';m.textContent=t}},err=t=>{const c=$('#cerr');if(c){c.hidden=false;c.innerHTML=t}};
   if(cache[key]){put(cache[key]);return}
   const s=await getSample();if(my!==req)return;
   if(!s){err(errMsg({code:'none'}));return}
   try{
-    const r=await s(`What does "${S.w}" mean in this sentence? Reply with one plain English phrase under 12 words. No preamble, no quotes, no other language.\nSentence: ${S.ctx}`,{modelTier:'quick',onText:({text})=>{if(my===req&&!S.def&&text&&!/^Thinking/.test(text))put(text)}});
+    const r=await s(ZH()?`英文单词 "${S.w}" 在下面这个句子里是什么意思？只用简体中文给一个简短释义，不超过 15 个字。不要解释，不要引号，不要重复英文。\nSentence: ${S.ctx}`:`What does "${S.w}" mean in this sentence? Reply with one plain English phrase under 12 words. No preamble, no quotes, no other language.\nSentence: ${S.ctx}`,{modelTier:'quick',onText:({text})=>{if(my===req&&!S.def&&text&&!/^Thinking/.test(text))put(text)}});
     cache[key]=(r.text||'').trim().replace(/^["“]|["”]$/g,'');if(my===req&&cache[key])put(cache[key]);
   }catch(e){if(my===req)err(esc(errMsg(e))+(e&&e.code==='not_granted'?'':' <button class="btn ghost" data-ctx="1" style="min-height:36px;margin-left:6px">重试</button>'))}
 }
 const inBook=w=>book.some(b=>b.w.toLowerCase()===w.toLowerCase());
 function markSaved(){const b=$('#save');if(b&&lookup.S)b.setAttribute('aria-pressed',inBook(lookup.S.hw))}
-function saveWord(){const S=lookup.S;if(!S)return;if(inBook(S.hw)){book=book.filter(b=>b.w.toLowerCase()!==S.hw.toLowerCase());LS.set('book',book);markSaved();toast('已从生词本移除',1500);return}book.unshift({w:S.hw,pos:S.pos,ipa:S.ipa,m:S.cm||S.def,s:S.ctx||'',d:doc.name,t:Date.now()});LS.set('book',book);markSaved();toast('已加入生词本',1500)}
+function saveWord(){const S=lookup.S;if(!S)return;if(inBook(S.hw)){book=book.filter(b=>b.w.toLowerCase()!==S.hw.toLowerCase());LS.set('book',book);markSaved();toast('已从生词本移除',1500);return}book.unshift({w:S.hw,pos:S.pos,ipa:S.ipa,m:S.cm||S.def||S.zh,s:S.ctx||'',d:doc.name,t:Date.now()});LS.set('book',book);markSaved();toast('已加入生词本',1500)}
 
 async function explain(text,ctx){
   const my=++req;
-  openSheet(`<div class="top"><div class="lab" style="margin-top:6px">Plain English</div><p class="m1 wait" id="m1">…</p><button class="more" id="more">${MORE}上滑看原文和难词</button></div><div class="det"><div class="lab">Original</div><p class="ctx">${esc(text)}</p><div id="kw"></div></div>`,'exp');
+  openSheet(`<div class="top"><div class="lab" style="margin-top:6px">${ZH()?'中文翻译':'Plain English'}</div><p class="m1 wait" id="m1">…</p><button class="more" id="more">${MORE}上滑看原文和难词</button></div><div class="det"><div class="lab">Original</div><p class="ctx">${esc(text)}</p><div id="kw"></div></div>`,'exp');
   target=selRange;requestAnimationFrame(keepVisible);
   const s=await getSample();if(my!==req)return;
   const m1=()=>$('#m1');
   if(!s){m1().textContent=errMsg({code:'none'});return}
   const show=t=>{const parts=t.trim().split(/\n+/),first=parts.shift()||'',rest=parts.filter(x=>x.trim());if(m1()){m1().className='m1';m1().textContent=first}
-    if($('#kw'))$('#kw').innerHTML=rest.length?`<div class="lab">Key words</div><ol>${rest.map(x=>`<li>${esc(x.replace(/^[•\-*\d.\s]+/,''))}</li>`).join('')}</ol>`:''};
+    if($('#kw'))$('#kw').innerHTML=rest.length?`<div class="lab">${ZH()?'难词':'Key words'}</div><ol>${rest.map(x=>`<li>${esc(x.replace(/^[•\-*\d.\s]+/,''))}</li>`).join('')}</ol>`:''};
   try{
-    const r=await s(`Explain this text to an English learner in plain, simple English only. Line 1: its meaning in one short sentence, under 20 words. Then up to 3 more lines, each "word: short meaning" for a hard word or phrase from the text. No preamble, no other language.\nText: ${text}${ctx?`\nParagraph it comes from: ${ctx}`:''}`,{modelTier:'quick',onText:({text})=>{if(my===req&&text&&!/^Thinking/.test(text))show(text)}});
+    const r=await s(ZH()?`把下面的英文翻译成自然通顺的简体中文，写在第 1 行。然后最多再写 3 行，每行格式为 "英文难词或短语：中文意思"。不要开场白，不要其他内容。\nText: ${text}${ctx?`\nParagraph it comes from: ${ctx}`:''}`:`Explain this text to an English learner in plain, simple English only. Line 1: its meaning in one short sentence, under 20 words. Then up to 3 more lines, each "word: short meaning" for a hard word or phrase from the text. No preamble, no other language.\nText: ${text}${ctx?`\nParagraph it comes from: ${ctx}`:''}`,{modelTier:'quick',onText:({text})=>{if(my===req&&text&&!/^Thinking/.test(text))show(text)}});
     if(my===req)show(r.text||'');
   }catch(e){if(my===req&&m1())m1().textContent=errMsg(e)}
 }
@@ -877,7 +884,7 @@ $('#explain').addEventListener('click',()=>{$('#explain').hidden=true;const t=se
 
 /* settings, contents, word book */
 function seg(k,opts){return `<div class="seg" data-k="${k}">${opts.map(([v,l])=>`<button data-v="${v}" aria-pressed="${set[k]===v}">${l}</button>`).join('')}</div>`}
-function setHTML(full){return `${full?'<div class="grp">阅读外观</div>':''}
+function setHTML(full){return `${full?'':`<div class="row"><span>释义语言<small>英英用英文解释英文；英汉显示中文释义和翻译</small></span>${seg('lang',[['en','英英'],['zh','英汉']])}</div>`}${full?'<div class="grp">阅读外观</div>':''}
 <div class="row"><span>字号</span><div class="step"><button data-fs="-1" aria-label="缩小">−</button><b class="fsv">${set.fs}</b><button data-fs="1" aria-label="放大">+</button></div></div>
 <div class="row"><span>行距</span>${seg('lh',[['c','紧凑'],['n','适中'],['a','宽松']])}</div>
 <div class="row"><span>背景</span>${seg('read',[['auto','自动'],['paper','白纸'],['sepia','米黄'],['night','夜间']])}</div>
@@ -885,14 +892,14 @@ function setHTML(full){return `${full?'<div class="grp">阅读外观</div>':''}
 ${full?'<div class="grp">专注</div>':''}<div class="row"><span>中间高亮<small>屏幕中间的一段保持清楚，其他段落变淡</small></span>${seg('focus',[['on','开'],['off','关']])}</div>
 <div class="row"><span>拆分长段落<small>把很长的段落切成两三句一小段</small></span>${seg('chunk',[['on','开'],['off','关']])}</div>
 ${full?`<div class="grp">朗读</div><div class="row"><span>朗读速度<small>声音风格会在这个基础上微调</small></span><div class="step"><button data-rd="-0.1" aria-label="减慢">−</button><b class="rtv">${fmtR(set.rate)}</b><button data-rd="0.1" aria-label="加快">+</button></div></div>${voiceHTML()}`:''}
-${full?`<div class="grp">查词</div><div class="row"><span>语境解释<small>自动时，点词后 Claude 会结合句子解释</small></span>${seg('ctx',[['auto','自动'],['manual','手动']])}</div>
+${full?`<div class="grp">查词</div><div class="row"><span>释义语言<small>英英用英文解释英文；英汉显示中文释义和翻译</small></span>${seg('lang',[['en','英英'],['zh','英汉']])}</div><div class="row"><span>语境解释<small>自动时，点词后 Claude 会结合句子解释</small></span>${seg('ctx',[['auto','自动'],['manual','手动']])}</div>
 <div class="grp">Claude 解释</div>
 <p class="hint" style="margin:4px 0 10px">在 <a href="https://platform.claude.com/" style="color:inherit">platform.claude.com</a> 登录，创建一个 API key 并充值少量余额，再把 key 粘贴到下面。key 只保存在这台手机上。</p>
 <input class="search" id="apik" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-..." value="${esc(LS.get('apikey',''))}">
 <div class="acts" style="margin-top:8px"><button class="btn" id="kSave">保存并测试</button>${LS.get('apikey','')?'<button class="btn ghost" id="kDel">删除 key</button>':''}</div>
 <p class="hint" id="kMsg">${LS.get('apikey','')?'已保存 API key。':'还没有填写 API key。'}</p>
 <div class="grp">离线</div>
-<div class="row"><span>完整离线词典<small>约 10 MB，下载后没有网络也能查所有单词</small></span><button class="btn ghost" id="dAll" style="min-height:40px">${LS.get('dictAll',0)?'已下载':'下载'}</button></div>`:''}`}
+<div class="row"><span>完整离线词典<small>约 15 MB，下载后没有网络也能查所有单词</small></span><button class="btn ghost" id="dAll" style="min-height:40px">${LS.get('dictAll2',0)?'已下载':'下载'}</button></div>`:''}`}
 function onSetClick(e){
   const b=e.target.closest('button');if(!b)return false;
   if(b.dataset.fs){set.fs=Math.min(28,Math.max(14,set.fs+ +b.dataset.fs));$$('.fsv').forEach(x=>x.textContent=set.fs);applySet();return true}
@@ -944,10 +951,10 @@ $('#setBox').addEventListener('click',async e=>{
     catch(err){$('#kMsg').textContent=errMsg(err)+(err&&err.message?' ('+err.message+')':'')}
     b.disabled=false;}
   else if(b.id==='kDel'){LS.set('apikey','');$('#setBox').innerHTML=setHTML(true);toast('已删除 API key')}
-  else if(b.id==='dAll'){if(LS.get('dictAll',0))return;if(!('caches' in window)){toast('这个浏览器不支持离线下载');return}
+  else if(b.id==='dAll'){if(LS.get('dictAll2',0))return;if(!('caches' in window)){toast('这个浏览器不支持离线下载');return}
     const files=[...new Set(Object.values(ROUTE))];b.disabled=true;let n=0;
-    try{const c=await caches.open('reader-dict');for(const f of files){const u='dict/'+f+'.json';if(!(await c.match(u)))await c.add(u);n++;b.textContent=Math.round(n/files.length*100)+'%'}
-      LS.set('dictAll',1);b.textContent='已下载';toast('离线词典下载好了')}
+    try{const c=await caches.open('reader-dict2');for(const f of files){const u='dict2/'+f+'.json';if(!(await c.match(u)))await c.add(u);n++;b.textContent=Math.round(n/files.length*100)+'%'}
+      LS.set('dictAll2',1);b.textContent='已下载';toast('离线词典下载好了')}
     catch(err){b.textContent='重试';b.disabled=false;toast('下载中断了，请检查网络后重试')}}
 });
 applySet();render();
