@@ -101,6 +101,7 @@ body.ra-on .pill{bottom:calc(var(--tab) + 86px + env(safe-area-inset-bottom))}
 .player svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .player #raPlay{width:52px;height:52px;border-radius:50%;background:var(--acc);color:var(--ai)}
 .player #raPlay svg{stroke-width:2.6}
+.player #raPlay.busy{animation:pulse 1s ease-in-out infinite}
 .player .spd{width:auto;min-width:58px;padding:0 10px;font:600 15px var(--ui);font-variant-numeric:tabular-nums;background:var(--chip)}
 .player .sm{width:34px}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
@@ -221,7 +222,7 @@ mark.hl{background:var(--hl);color:inherit;border-radius:3px;box-shadow:0 0 0 2p
 <section class="view" id="vSet">
   <h1 class="big">设置</h1>
   <div id="setBox"></div>
-  <p class="about">离线词典基于 Princeton WordNet 3.1、ECDICT 英汉词典和 CMU Pronouncing Dictionary，共约 9 万词条。点词的语境解释和划句解释由 Claude 生成，需要填入你自己的 Anthropic API key，按用量付费；没有 key 时离线词典、朗读、书架和生词本都照常能用。你的书和生词只保存在这台手机上。</p>
+  <p class="about">离线词典基于 Princeton WordNet 3.1、ECDICT 英汉词典和 CMU Pronouncing Dictionary，共约 9 万词条。点词的语境解释和划句解释由 Claude 生成，需要填入你自己的 Anthropic API key，按用量付费；没有 key 时离线词典、朗读、书架和生词本都照常能用。你的书和生词只保存在这台手机上。AI 自然语音使用开源的 Kokoro-82M 模型，在手机本地生成，读的内容不会上传。</p>
 </section>
 
 <nav class="tabs" id="tabs">
@@ -264,7 +265,7 @@ const SAMPLE={key:'sample',name:'How a River Draws Its Own Map',pages:1,added:0,
 {t:'h',x:'When a loop is cut off'},
 {t:'p',x:'Eventually two neighbouring bends may come so close that a flood breaks through the narrow strip of land between them. The river abandons the old loop and takes the shorter path. What remains is a curved, isolated lake, often called an oxbow lake, which can persist for centuries as a quiet reminder of where the river once flowed.'},
 {t:'p',x:'Engineers who straighten rivers for shipping often find that the water is reluctant to cooperate. Without constant maintenance, the channel begins to bend again, as if the river remembers the shape it prefers.'}]};
-let set=Object.assign({fs:19,lh:'n',read:'auto',font:'serif',ctx:'auto',focus:'on',chunk:'on',rate:1,engine:'web',voice:'',cvoice:'buttery',style:'natural',accent:'all',lang:'en'},LS.get('set',{}));
+let set=Object.assign({fs:19,lh:'n',read:'auto',font:'serif',ctx:'auto',focus:'on',chunk:'on',rate:1,engine:'web',voice:'',cvoice:'buttery',style:'natural',accent:'all',lang:'en',aivoice:'af_heart'},LS.get('set',{}));
 let curEl=null,lock=false,selRange=null;
 let book=LS.get('book',[]),shelf=[SAMPLE],doc=SAMPLE,view='vShelf',readY=0;
 let sample=null,tts=null,mode='',req=0,selT=0,lastSel=0,selText='',selCtx='',cache={};
@@ -711,6 +712,7 @@ function raSpeak(){
   if(!s){raPause();RA.i=Math.max(0,RA.list.length-1);toast('已经读完了');return}
   showSentence(s);
   const base=RA.i,g=group(base);
+  if(useAI()){aiSpeak(tok,base);return}
   if(useClaude()){
     tts.speak(g.map((x,k)=>({text:x.text,id:'s'+(base+k),voice:set.cvoice})),{rate:cRate()})
       .then(()=>setTimeout(()=>{if(tok===RA.tok&&RA.playing){RA.i=base+g.length;raSpeak()}},sty()[5]))
@@ -729,16 +731,17 @@ function raSpeak(){
   u.onerror=e=>{if(tok!==RA.tok||e.error==='interrupted'||e.error==='canceled')return;raPause();toast('朗读出错了，请再点一次播放')};
   try{if(SYN.speaking||SYN.pending)SYN.cancel()}catch(e){}SYN.speak(u);
 }
-function raStop(){RA.tok++;try{SYN&&SYN.cancel()}catch(e){}try{tts&&tts.stop()}catch(e){}}
+function raStop(){RA.tok++;aiStopSrc();try{SYN&&SYN.cancel()}catch(e){}try{tts&&tts.stop()}catch(e){}}
 function raPause(){RA.playing=false;raStop();hlSet('ra-w',null);raUI()}
-function raPlay(){if(!SYN&&!tts){toast('这个设备不支持朗读');return}if(!RA.list.length)RA.list=buildList();if(!RA.list.length)return;RA.playing=true;lock=true;raUI();raSpeak()}
+function raPlay(){if(useAI())aiUnlock();if(!SYN&&!tts&&!useAI()){toast('这个设备不支持朗读');return}if(!RA.list.length)RA.list=buildList();if(!RA.list.length)return;RA.playing=true;lock=true;raUI();raSpeak()}
 function raStartIndex(){
-  RA.list=buildList();let el=curEl;
+  RA.list=buildList();AI.cache.clear();let el=curEl;
   if(!el){const y=innerHeight*.3;el=$$('#doc>p,#doc>h2').find(e=>e.getBoundingClientRect().bottom>y)}
   const i=RA.list.findIndex(s=>s.el===el);return i<0?0:i;
 }
 function raOpen(){
-  if(!SYN&&!tts){toast('这个设备不支持朗读');return}
+  if(!LS.get('aiHint',0)&&!useAI()){LS.set('aiHint',1);setTimeout(()=>toast('想要更自然的声音？点播放栏上的倍速，选“AI 自然语音”。',5000),1500)}
+  if(!SYN&&!tts&&!useAI()){toast('这个设备不支持朗读');return}
   closeSheet();RA.open=true;$('#player').hidden=false;document.body.classList.add('ra-on');RA.i=raStartIndex();showSentence(RA.list[RA.i],false);showNav();raPlay();
 }
 function raClose(){raPause();RA.open=false;$('#player').hidden=true;document.body.classList.remove('ra-on');hlSet('ra-s',null);hlSet('ra-w',null);lock=false;showNav();track()}
@@ -762,8 +765,8 @@ function voiceHTML(){
   return `<div class="vbox"><div class="lab">声音风格</div>
 <div class="chips">${STYLES.map(x=>`<button class="chip" data-sty="${x[0]}" aria-pressed="${sty()[0]===x[0]}">${x[1]}</button>`).join('')}</div>
 <p class="hint">${sty()[2]}</p>
-${tts?`<div class="row"><span>声音来源</span>${seg('engine',[['claude','Claude 自然声音'],['web','设备自带']])}</div>`:''}
-${useClaude()?'<p class="hint">Claude 声音最接近真人，每种风格对应一种 Claude 音色。速度范围是 0.7x 到 1.5x，会逐句高亮。</p>'
+<div class="row"><span>声音来源</span>${seg('engine',[['ai','AI 自然语音'],['web','系统声音']])}</div>
+${set.engine==='ai'?aiBlock():useClaude()?'<p class="hint">Claude 声音最接近真人，每种风格对应一种 Claude 音色。速度范围是 0.7x 到 1.5x，会逐句高亮。</p>'
  :`<div class="row"><span>口音</span>${seg('accent',[['all','全部'],['us','美式'],['gb','英式'],['au','澳式']])}</div>
 ${vs.length?`<div class="row"><span>声音</span><select class="vsel" aria-label="选择声音">${vs.map(v=>`<option value="${esc(v.name)}" ${cur&&v.name===cur.name?'selected':''}>${vScore(v)>=25?'★ ':''}${esc(v.name)}</option>`).join('')}</select></div><p class="hint">带 ★ 的声音更自然。${tts?'':NOHINT}</p>`
  :`<p class="hint">${SYN&&SYN.getVoices().length?'这个口音下没有找到声音，换一个口音试试。':'这台设备上没有找到可用的英文声音。'}</p>`}`}
@@ -790,6 +793,7 @@ document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||
   if(b.dataset.rd){setRate(set.rate+ +b.dataset.rd);return}
   if(b.dataset.sty){set.style=b.dataset.sty;set.cvoice=sty()[6];LS.set('set',set);refreshVoice();setRate(set.rate);return}
   if(b.dataset.try){if(RA.playing)raPause();const t='This is how your book will sound with this voice.';
+    if(useAI()){aiUnlock();b.disabled=true;aiInit().then(()=>aiGen(t,aiVoice(),effRate())).then(m=>{const c=AI.ctx,bf=c.createBuffer(1,m.audio.length,m.sr);bf.copyToChannel(m.audio,0);const sr=c.createBufferSource();sr.buffer=bf;sr.connect(c.destination);sr.start()}).catch(()=>toast('AI 语音试听失败')).finally(()=>{b.disabled=false});return}
     if(useClaude()){tts.speak(t,{rate:cRate(),language:'en',voice:set.cvoice}).catch(()=>{})}
     else if(SYN){const u=new SpeechSynthesisUtterance(t);u.rate=effRate();u.pitch=sty()[4];const v=pickVoice();if(v){u.voice=v;u.lang=v.lang}SYN.cancel();SYN.speak(u)}
     return}
@@ -842,6 +846,80 @@ function penEnd(e){
   selRange=r;explain(text.slice(0,900),p&&p.textContent.length>text.length?p.textContent.slice(0,900):'');
 }
 $('#doc').addEventListener('pointerup',penEnd);$('#doc').addEventListener('pointercancel',penEnd);
+
+/* AI natural voice (Kokoro-82M, runs on this phone) */
+const AIV=[['af_heart','Heart','us','女声',1],['af_bella','Bella','us','女声',1],['af_nicole','Nicole','us','女声，轻柔',0],['af_sarah','Sarah','us','女声',0],['af_kore','Kore','us','女声',0],['af_aoede','Aoede','us','女声',0],['am_michael','Michael','us','男声',0],['am_fenrir','Fenrir','us','男声',0],['am_puck','Puck','us','男声',0],['bf_emma','Emma','gb','女声',1],['bf_isabella','Isabella','gb','女声',0],['bm_george','George','gb','男声',0],['bm_fable','Fable','gb','男声',0]];
+const AI={w:null,initP:null,ready:false,id:0,pending:new Map(),cache:new Map(),ctx:null,src:null,slow:0,warned:false};
+const aiOK=()=>!!LS.get('aiOK',0);
+const useAI=()=>set.engine==='ai'&&aiOK();
+function aiList(){const a=set.accent;return AIV.filter(v=>a!=='us'&&a!=='gb'||v[2]===a)}
+function aiVoice(){const l=aiList();return(l.find(v=>v[0]===set.aivoice)||l[0]||AIV[0])[0]}
+function aiProgress(t){$$('.aiprog').forEach(x=>x.textContent=t)}
+function aiInit(){
+  if(AI.initP)return AI.initP;
+  AI.initP=new Promise((res,rej)=>{
+    let w;try{w=new Worker('tts-worker.js',{type:'module'})}catch(e){rej(e);return}
+    AI.w=w;
+    w.onmessage=e=>{const m=e.data;
+      if(m.type==='progress')aiProgress(`正在下载 AI 语音 ${Math.round(m.loaded/1048576)} / ${Math.round(m.total/1048576)} MB`);
+      else if(m.type==='ready'){AI.ready=true;res()}
+      else if(m.type==='error'&&!AI.ready)rej(new Error(m.message));
+      else if(m.type==='audio'){const p=AI.pending.get(m.id);if(p){AI.pending.delete(m.id);m.error?p.rej(new Error(m.error)):p.res(m)}}};
+    w.onerror=e=>{const err=new Error(e.message||'worker');if(!AI.ready)rej(err);AI.pending.forEach(p=>p.rej(err));AI.pending.clear();aiReset()};
+    w.postMessage({type:'init'});
+  });
+  AI.initP.catch(()=>aiReset());
+  return AI.initP;
+}
+function aiReset(){try{AI.w&&AI.w.terminate()}catch(e){}AI.w=null;AI.initP=null;AI.ready=false;AI.cache.clear()}
+function aiGen(text,voice,speed){const id=++AI.id;return new Promise((res,rej)=>{AI.pending.set(id,{res,rej});AI.w.postMessage({type:'gen',id,text,voice,speed})})}
+function aiUnlock(){
+  try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}
+  try{if(!AI.ctx){const C=window.AudioContext||window.webkitAudioContext;AI.ctx=new C()}
+    if(AI.ctx.state!=='running')AI.ctx.resume();
+    const b=AI.ctx.createBuffer(1,1,22050),s=AI.ctx.createBufferSource();s.buffer=b;s.connect(AI.ctx.destination);s.start()}catch(e){}
+}
+function aiStopSrc(){if(AI.src){const s=AI.src;AI.src=null;try{s.onended=null;s.stop()}catch(e){}}const p=$('#raPlay');if(p)p.classList.remove('busy')}
+function aiGet(i){
+  const s=RA.list[i];if(!s)return Promise.resolve(null);
+  const sp=Math.round(effRate()*100)/100,v=aiVoice(),key=i+'|'+v+'|'+sp;
+  if(!AI.cache.has(key)){
+    const p=aiGen(s.text,v,sp).then(m=>{const dur=m.audio.length/m.sr*1000;if(m.ms>dur*1.25)AI.slow++;else AI.slow=Math.max(0,AI.slow-1);
+      if(AI.slow>=3&&!AI.warned){AI.warned=true;toast('这台手机生成 AI 语音比较慢，句子之间可能会停顿。也可以在朗读设置里换回系统声音。',6000)}return m});
+    p.catch(()=>AI.cache.delete(key));AI.cache.set(key,p);
+  }
+  return AI.cache.get(key);
+}
+function aiPrune(i){for(const k of AI.cache.keys()){const n=+k.split('|')[0];if(n<i-1||n>i+4)AI.cache.delete(k)}}
+async function aiSpeak(tok,i){
+  const s=RA.list[i],btn=$('#raPlay');btn.classList.add('busy');
+  if(!AI.ready){const t=setTimeout(()=>{if(tok===RA.tok)toast('正在准备 AI 语音…',2500)},900);
+    try{await aiInit()}catch(e){clearTimeout(t);if(tok!==RA.tok)return;raPause();toast('AI 语音启动失败，先用系统声音读。',4000);set.engine='web';LS.set('set',set);refreshVoice();return}
+    clearTimeout(t)}
+  if(tok!==RA.tok||!RA.playing)return;
+  let m;try{m=await aiGet(i)}catch(e){if(tok===RA.tok){raPause();toast('AI 语音生成失败，请再点一次播放')}return}
+  if(tok!==RA.tok||!RA.playing||!m)return;
+  btn.classList.remove('busy');aiGet(i+1).catch(()=>{});aiGet(i+2).catch(()=>{});aiPrune(i);
+  const ctx=AI.ctx;if(!ctx){raPause();return}
+  const buf=ctx.createBuffer(1,m.audio.length,m.sr);buf.copyToChannel(m.audio,0);
+  const src=ctx.createBufferSource();src.buffer=buf;src.connect(ctx.destination);AI.src=src;
+  src.onended=()=>{if(AI.src!==src)return;AI.src=null;if(tok!==RA.tok||!RA.playing)return;
+    const nx=RA.list[i+1];setTimeout(()=>{if(tok===RA.tok&&RA.playing){RA.i=i+1;raSpeak()}},nx&&nx.el===s.el?60:sty()[5])};
+  src.start();
+}
+function aiBlock(){
+  if(!aiOK())return `<div class="aibox"><p class="hint" style="margin-top:10px">AI 自然语音在手机上运行开源的 Kokoro 模型，声音比系统声音自然很多。第一次使用需要下载约 115 MB，之后可以离线使用。建议连上 Wi‑Fi 再下载。</p><div class="acts" style="margin-top:8px"><button class="btn" data-aidl="1">下载 AI 语音</button></div><p class="hint aiprog"></p></div>`;
+  const l=aiList(),cur=aiVoice();
+  return `<div class="row"><span>口音</span>${seg('accent',[['all','全部'],['us','美式'],['gb','英式']])}</div>
+<div class="row"><span>声音</span><select class="vsel aisel" aria-label="选择 AI 声音">${l.map(v=>`<option value="${v[0]}" ${v[0]===cur?'selected':''}>${v[4]?'★ ':''}${v[1]} · ${v[2]==='us'?'美式':'英式'}${v[3]}</option>`).join('')}</select></div>
+<p class="hint">AI 声音会逐句高亮。风格会调整语速和停顿，不改变音调。带 ★ 的声音效果最好。</p>`;
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-aidl]');if(!b)return;
+  b.disabled=true;b.textContent='下载中…';set.engine='ai';LS.set('set',set);aiProgress('正在连接…');
+  aiInit().then(()=>{LS.set('aiOK',1);refreshVoice();toast('AI 语音准备好了，朗读时会自动使用')})
+    .catch(err=>{aiProgress('');b.disabled=false;b.textContent='重新下载';toast('AI 语音下载失败，请检查网络后重试。'+(err&&err.message?'（'+err.message.slice(0,60)+'）':''),6000)});
+});
+document.addEventListener('change',e=>{if(e.target.matches&&e.target.matches('select.aisel')){set.aivoice=e.target.value;LS.set('set',set);$$('select.aisel').forEach(x=>{if(x!==e.target)x.value=set.aivoice});if(RA.playing){clearTimeout(rateT);rateT=setTimeout(raSpeak,150)}}},true);
 
 /* tapping words */
 function wordAt(x,y){
@@ -942,6 +1020,7 @@ const standalone=(navigator.standalone===true)||matchMedia('(display-mode: stand
 if(!standalone&&!LS.get('hintX',0)&&/iPhone|iPad|iPod/.test(navigator.userAgent))$('#ihint').hidden=false;
 $('#ihX').onclick=()=>{$('#ihint').hidden=true;LS.set('hintX',1)};
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('controllerchange',()=>{if(window.crossOriginIsolated)return;try{if(sessionStorage.getItem('coiR'))return;sessionStorage.setItem('coiR','1')}catch(e){return}location.reload()});
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 $('#setBox').addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b)return;
