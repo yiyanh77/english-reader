@@ -585,13 +585,13 @@ function keepVisible(){
 function clearMark(){const m=$('#doc mark.hl');if(m){const p=m.parentNode;m.replaceWith(...m.childNodes);p.normalize()}}
 const SAY='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 8.5a5 5 0 0 1 0 7"/></svg>';
 const API_MODEL='claude-haiku-5-5';
-function makeSample(key){
+function makeSample(key,ws){
   return async(prompt,opts={})=>{
     let res;
-    try{res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:opts.signal,headers:{'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},
+    try{res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',signal:opts.signal,headers:Object.assign({'x-api-key':key,'anthropic-version':'2023-06-01','content-type':'application/json','anthropic-dangerous-direct-browser-access':'true'},ws?{'anthropic-workspace-id':ws}:{}),
       body:JSON.stringify({model:API_MODEL,max_tokens:300,stream:true,output_config:{effort:'low'},thinking:{type:'disabled'},messages:[{role:'user',content:prompt}]})})}
     catch(e){throw{code:navigator.onLine===false?'offline':'network'}}
-    if(!res.ok){let m='';try{m=(await res.json()).error.message}catch(_){}throw{code:res.status===401||res.status===403?'bad_key':res.status===429?'rate_limited':res.status>=500?'overloaded':res.status===400&&/credit/i.test(m)?'credit':'api',message:m}}
+    if(!res.ok){let m='';try{m=(await res.json()).error.message}catch(_){}throw{code:/workspace/i.test(m)?'workspace':res.status===401||res.status===403?'bad_key':res.status===429?'rate_limited':res.status>=500?'overloaded':res.status===400&&/credit/i.test(m)?'credit':'api',message:m}}
     const rd=res.body.getReader(),dec=new TextDecoder();let buf='',text='';
     for(;;){const{done,value}=await rd.read();if(done)break;buf+=dec.decode(value,{stream:true});let i;
       while((i=buf.indexOf('\n\n'))>=0){const ev=buf.slice(0,i);buf=buf.slice(i+2);const line=ev.split('\n').find(l=>l.startsWith('data:'));if(!line)continue;
@@ -601,8 +601,8 @@ function makeSample(key){
     return{text,truncated:false};
   };
 }
-async function getSample(){const k=LS.get('apikey','');sample=k?makeSample(k):null;return sample}
-function errMsg(e){const c=e&&e.code;return c==='none'?'在“设置”里填入 Anthropic API key 后就能用 Claude 解释。':c==='bad_key'?'API key 不正确，请到“设置”里检查。':c==='credit'?'API 账户余额不足，请先在 Anthropic 控制台充值。':c==='offline'?'现在没有网络。离线词典还可以照常用。':c==='overloaded'?'Claude 现在比较忙，请稍后再试。':c==='network'?'连不上 Claude，请检查网络。':c==='not_granted'?'Claude 访问权限已关闭，允许后才能使用语境解释。':c==='rate_limited'?'请求太频繁，请稍等再试。':'语境解释没有成功，点“重试”再来一次。'}
+async function getSample(){const k=LS.get('apikey','');sample=k?makeSample(k,LS.get('apiws','')):null;return sample}
+function errMsg(e){const c=e&&e.code;return c==='workspace'?'这个 key 需要工作区：创建 key 时选一个工作区，或在设置里填写工作区 ID。':c==='none'?'在“设置”里填入 Anthropic API key 后就能用 Claude 解释。':c==='bad_key'?'API key 不正确，请到“设置”里检查。':c==='credit'?'API 账户余额不足，请先在 Anthropic 控制台充值。':c==='offline'?'现在没有网络。离线词典还可以照常用。':c==='overloaded'?'Claude 现在比较忙，请稍后再试。':c==='network'?'连不上 Claude，请检查网络。':c==='not_granted'?'Claude 访问权限已关闭，允许后才能使用语境解释。':c==='rate_limited'?'请求太频繁，请稍等再试。':'语境解释没有成功，点“重试”再来一次。'}
 
 const STAR='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>';
 const MORE='<svg viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></svg>';
@@ -972,8 +972,9 @@ ${full?'<div class="grp">专注</div>':''}<div class="row"><span>中间高亮<sm
 ${full?`<div class="grp">朗读</div><div class="row"><span>朗读速度<small>声音风格会在这个基础上微调</small></span><div class="step"><button data-rd="-0.1" aria-label="减慢">−</button><b class="rtv">${fmtR(set.rate)}</b><button data-rd="0.1" aria-label="加快">+</button></div></div>${voiceHTML()}`:''}
 ${full?`<div class="grp">查词</div><div class="row"><span>释义语言<small>英英用英文解释英文；英汉显示中文释义和翻译</small></span>${seg('lang',[['en','英英'],['zh','英汉']])}</div><div class="row"><span>语境解释<small>自动时，点词后 Claude 会结合句子解释</small></span>${seg('ctx',[['auto','自动'],['manual','手动']])}</div>
 <div class="grp">Claude 解释</div>
-<p class="hint" style="margin:4px 0 10px">在 <a href="https://platform.claude.com/" style="color:inherit">platform.claude.com</a> 登录，创建一个 API key 并充值少量余额，再把 key 粘贴到下面。key 只保存在这台手机上。</p>
+<p class="hint" style="margin:4px 0 10px">在 <a href="https://platform.claude.com/settings/keys" style="color:inherit">platform.claude.com</a> 创建一个 API key（创建时选一个工作区），充值少量余额，再把 key 粘贴到下面。key 只保存在这台手机上。</p>
 <input class="search" id="apik" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-..." value="${esc(LS.get('apikey',''))}">
+<input class="search" id="apiws" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="工作区 ID（可选，wrkspc_ 开头）" value="${esc(LS.get('apiws',''))}">
 <div class="acts" style="margin-top:8px"><button class="btn" id="kSave">保存并测试</button>${LS.get('apikey','')?'<button class="btn ghost" id="kDel">删除 key</button>':''}</div>
 <p class="hint" id="kMsg">${LS.get('apikey','')?'已保存 API key。':'还没有填写 API key。'}</p>
 <div class="grp">离线</div>
@@ -1024,12 +1025,12 @@ if('serviceWorker' in navigator)navigator.serviceWorker.addEventListener('contro
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 $('#setBox').addEventListener('click',async e=>{
   const b=e.target.closest('button');if(!b)return;
-  if(b.id==='kSave'){const k=$('#apik').value.trim();if(!k){toast('请先粘贴 API key');return}
+  if(b.id==='kSave'){const k=$('#apik').value.trim(),ws=$('#apiws').value.trim();if(!k){toast('请先粘贴 API key');return}
     $('#kMsg').textContent='正在测试…';b.disabled=true;
-    try{const r=await makeSample(k)('Reply with the single word: ok',{});LS.set('apikey',k);sample=null;$('#kMsg').textContent='可以用了。点词和划句都会由 Claude 解释。';toast('API key 已保存')}
+    try{const r=await makeSample(k,ws)('Reply with the single word: ok',{});LS.set('apikey',k);LS.set('apiws',ws);sample=null;$('#kMsg').textContent='可以用了。点词和划句都会由 Claude 解释。';toast('API key 已保存')}
     catch(err){$('#kMsg').textContent=errMsg(err)+(err&&err.message?' ('+err.message+')':'')}
     b.disabled=false;}
-  else if(b.id==='kDel'){LS.set('apikey','');$('#setBox').innerHTML=setHTML(true);toast('已删除 API key')}
+  else if(b.id==='kDel'){LS.set('apikey','');LS.set('apiws','');$('#setBox').innerHTML=setHTML(true);toast('已删除 API key')}
   else if(b.id==='dAll'){if(LS.get('dictAll2',0))return;if(!('caches' in window)){toast('这个浏览器不支持离线下载');return}
     const files=[...new Set(Object.values(ROUTE))];b.disabled=true;let n=0;
     try{const c=await caches.open('reader-dict2');for(const f of files){const u='dict2/'+f+'.json';if(!(await c.match(u)))await c.add(u);n++;b.textContent=Math.round(n/files.length*100)+'%'}
